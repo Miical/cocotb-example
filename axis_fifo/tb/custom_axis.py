@@ -1,13 +1,12 @@
-import cocotb
-from cocotb.triggers import RisingEdge
+import sys
+sys.path.append("/home/miical/Projects/PyMLVP/src/")
 import random
+from mlvp.triggers import *
 
 '''
 Signal Driver
 '''
-async def axis_source(data, NUM_DATA, VALID_PROB=0.5):
-    
-    dut = cocotb.top
+async def axis_source(dut, data, NUM_DATA, VALID_PROB=0.5):
 
     def reset():
         dut.s_valid.value = dut.s_data.value = dut.s_last.value = dut.s_keep.value = 0
@@ -26,12 +25,13 @@ async def axis_source(data, NUM_DATA, VALID_PROB=0.5):
                 dut.s_valid.value = valid
                 dut.s_data.value  = int(data[i_data])
                 dut.s_keep.value  = 1
+                print(f'AXIS Source: aclk={i_clk}, data={int(data[i_data])}')
 
                 if i_data == NUM_DATA-1:
                     dut.s_last.value = 1
                 i_data += 1
 
-        await RisingEdge(dut.aclk)
+        await ClockCycles(dut)
         i_clk += 1
 
     reset()
@@ -39,9 +39,8 @@ async def axis_source(data, NUM_DATA, VALID_PROB=0.5):
 '''
 Signal Monitor
 '''
-async def axis_sink(data, NUM_DATA, READY_PROB=0.5):
+async def axis_sink(dut, data, NUM_DATA, READY_PROB=0.5):
 
-    dut = cocotb.top
     dut.m_ready.value = 1
 
     NUM_DATA = len(data)
@@ -53,8 +52,8 @@ async def axis_sink(data, NUM_DATA, READY_PROB=0.5):
 
         ready = random.choices([0,1], [1-READY_PROB, READY_PROB])[0]
         dut.m_ready.value = ready
-        
-        await RisingEdge(dut.aclk)
+
+        await ClockCycles(dut)
         i_clk += 1
 
         if ready and dut.m_valid.value:
